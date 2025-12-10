@@ -1,0 +1,537 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Heatless Snake — Cream & Light Blue</title>
+
+<!-- Google font (thin, rounded feel similar to Poppins) -->
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;500;700&display=swap" rel="stylesheet">
+
+<style>
+  :root{
+    --cream: #f7f3ea;
+    --light-blue: #d9e7f6;
+    --ink: #203747; /* darker accent for contrast */
+    --snake: #1f5672;
+    --fruit: #ff6b6b;
+    --muted: #5b6b74;
+  }
+
+  html,body{
+    height:100%;
+    margin:0;
+    background:var(--cream);
+    font-family: "Poppins", system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+    color:var(--ink);
+    -webkit-font-smoothing:antialiased;
+    -moz-osx-font-smoothing:grayscale;
+  }
+
+  .wrap{
+    min-height:100%;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:48px 24px;
+    box-sizing:border-box;
+  }
+
+  .card{
+    width:100%;
+    max-width:900px;
+    background:linear-gradient(180deg, rgba(217,231,246,0.9), rgba(255,255,255,0.85));
+    border-radius:16px;
+    box-shadow:0 8px 30px rgba(20,30,40,0.08);
+    padding:28px;
+    text-align:center;
+    border:1px solid rgba(32,55,71,0.05);
+  }
+
+  h1{
+    margin:0 0 8px 0;
+    font-weight:500;
+    font-size:1.6rem;
+    color:var(--ink);
+    letter-spacing:0.2px;
+  }
+
+  p.lead{
+    margin:0 0 18px 0;
+    color:var(--muted);
+    font-weight:300;
+    font-size:0.95rem;
+  }
+
+  .topbar{
+    display:flex;
+    gap:12px;
+    align-items:center;
+    justify-content:center;
+    margin-bottom:18px;
+  }
+
+  .stat{
+    background:rgba(255,255,255,0.6);
+    padding:8px 14px;
+    border-radius:999px;
+    border:1px solid rgba(32,55,71,0.04);
+    font-weight:500;
+    color:var(--ink);
+    min-width:86px;
+  }
+
+  .controls{
+    margin-top:10px;
+    color:var(--muted);
+    font-size:0.9rem;
+    font-weight:300;
+  }
+
+  /* game area */
+  .game-wrap{
+    display:flex;
+    gap:22px;
+    align-items:flex-start;
+    justify-content:center;
+    flex-wrap:wrap;
+    margin-top:20px;
+  }
+
+  canvas{
+    background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.02));
+    border-radius:12px;
+    box-shadow:inset 0 2px 8px rgba(0,0,0,0.03);
+    border:1px solid rgba(32,55,71,0.05);
+    image-rendering: crisp-edges;
+  }
+
+  .sidebar{
+    max-width:220px;
+    min-width:220px;
+    text-align:left;
+    font-weight:300;
+    color:var(--muted);
+  }
+
+  .sidebar h3{
+    margin:0 0 8px 0;
+    font-weight:500;
+    color:var(--ink);
+    font-size:1rem;
+  }
+
+  .btn{
+    display:inline-block;
+    padding:10px 16px;
+    border-radius:10px;
+    background:var(--ink);
+    color:white;
+    text-decoration:none;
+    font-weight:600;
+    border:0;
+    cursor:pointer;
+    margin-top:12px;
+  }
+
+  .muted-block{
+    background:rgba(255,255,255,0.7);
+    padding:12px;
+    margin-top:10px;
+    border-radius:10px;
+    border:1px solid rgba(32,55,71,0.04);
+  }
+
+  footer{
+    margin-top:18px;
+    color:var(--muted);
+    font-size:0.85rem;
+    font-weight:300;
+  }
+
+  @media (max-width:720px){
+    .game-wrap{flex-direction:column; align-items:center;}
+    .sidebar{max-width:100%; min-width:unset; width:100%;}
+  }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <div class="card" role="main">
+    <h1>Heatless Snake</h1>
+    <p class="lead">Classic snake with a calm cream & light-blue palette. Collect fruit — but note: the fruit moves every 5 seconds if you haven't eaten it yet.</p>
+
+    <div class="topbar" aria-hidden="true">
+      <div class="stat">Score: <span id="score">0</span></div>
+      <div class="stat">Speed: <span id="speedDisplay">8</span> fps</div>
+      <div class="stat">Fruit timer: <span id="fruitTimer">5</span>s</div>
+    </div>
+
+    <div class="game-wrap">
+      <canvas id="game" width="520" height="520" aria-label="Snake game"></canvas>
+
+      <div class="sidebar">
+        <h3>How to play</h3>
+        <div class="muted-block">
+          <p>Use arrow keys or WASD to move. Eat the red fruit to grow. If you don't reach the fruit within 5 seconds, it will teleport to a new random spot.</p>
+          <p style="margin-top:8px;"><strong>Tip:</strong> Plan ahead — the fruit can move unexpectedly.</p>
+          <button class="btn" id="startBtn">Start / Restart</button>
+        </div>
+
+        <h3 style="margin-top:14px;">Heatless Theme</h3>
+        <div class="muted-block">
+          <p>Colors: cream & light blue. Thin rounded font to keep a modern calm look.</p>
+        </div>
+
+        <div style="margin-top:12px;">
+          <h3>Controls</h3>
+          <div class="muted-block">
+            <p>Arrows or W/A/S/D — pause with Space</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <footer>Made with a calm palette. Fruit moves every 5s if uneaten.</footer>
+  </div>
+</div>
+
+<script>
+/* ---------- Snake game single-file implementation ----------
+   - grid-based snake on canvas
+   - fruit teleports every 5s if not eaten
+   - arrow keys / WASD controls
+   - Start/Restart button
+------------------------------------------------------------ */
+
+(() => {
+  const canvas = document.getElementById('game');
+  const ctx = canvas.getContext('2d');
+
+  // Visual config
+  const W = canvas.width;
+  const H = canvas.height;
+  const cols = 26;                // grid cells horizontally
+  const rows = 26;                // grid cells vertically
+  const cellW = Math.floor(W / cols);
+  const cellH = Math.floor(H / rows);
+
+  // Elements
+  const scoreEl = document.getElementById('score');
+  const speedDisplay = document.getElementById('speedDisplay');
+  const fruitTimerDisplay = document.getElementById('fruitTimer');
+  const startBtn = document.getElementById('startBtn');
+
+  // Colors (from CSS variables)
+  const colors = {
+    bg: getComputedStyle(document.documentElement).getPropertyValue('--light-blue').trim() || '#d9e7f6',
+    canvasBg: getComputedStyle(document.documentElement).getPropertyValue('--cream').trim() || '#f7f3ea',
+    snake: getComputedStyle(document.documentElement).getPropertyValue('--snake').trim() || '#1f5672',
+    fruit: getComputedStyle(document.documentElement).getPropertyValue('--fruit').trim() || '#ff6b6b',
+    ink: getComputedStyle(document.documentElement).getPropertyValue('--ink').trim() || '#203747'
+  };
+
+  // Game state
+  let snake = [];
+  let dir = {x:1, y:0}; // moving right at start
+  let nextDir = null;
+  let fruit = {x:0,y:0};
+  let score = 0;
+  let running = false;
+  let fps = 8; // frames per second (snake moves)
+  let gameInterval = null;
+  let fruitTimer = null;
+  let fruitCountdown = 5; // seconds until fruit moves
+  let fruitMoveIntervalMs = 5000; // 5s
+
+  // Initialize
+  function resetGame(){
+    snake = [{x: Math.floor(cols/2), y: Math.floor(rows/2)}];
+    dir = {x:1,y:0};
+    nextDir = null;
+    score = 0;
+    fps = 8;
+    updateUI();
+    placeFruit();
+    resetFruitTimer();
+  }
+
+  // Place fruit at random empty cell
+  function placeFruit(){
+    let tries = 0;
+    while(true){
+      const x = Math.floor(Math.random()*cols);
+      const y = Math.floor(Math.random()*rows);
+      let collides = snake.some(s => s.x===x && s.y===y);
+      if(!collides){
+        fruit.x = x; fruit.y = y;
+        break;
+      }
+      tries++;
+      if(tries>200) break; // fallback
+    }
+  }
+
+  function resetFruitTimer(){
+    fruitCountdown = Math.floor(fruitMoveIntervalMs / 1000);
+    fruitTimerDisplay.textContent = fruitCountdown;
+    if(fruitTimer) clearInterval(fruitTimer);
+    fruitTimer = setInterval(() => {
+      fruitCountdown--;
+      if(fruitCountdown <= 0){
+        // move fruit
+        placeFruit();
+        fruitCountdown = Math.floor(fruitMoveIntervalMs / 1000);
+      }
+      fruitTimerDisplay.textContent = fruitCountdown;
+    }, 1000);
+  }
+
+  // Input
+  const keyMap = {
+    ArrowLeft:  {x:-1,y:0},
+    ArrowRight: {x:1,y:0},
+    ArrowUp:    {x:0,y:-1},
+    ArrowDown:  {x:0,y:1},
+    a: {x:-1,y:0},
+    d: {x:1,y:0},
+    w: {x:0,y:-1},
+    s: {x:0,y:1}
+  };
+
+  window.addEventListener('keydown', (e) => {
+    if(!running && (e.key === ' ')) { start(); e.preventDefault(); return; }
+    if(e.key === ' ') { togglePause(); e.preventDefault(); return; }
+    const k = e.key;
+    if(keyMap[k]){
+      const nd = keyMap[k];
+      // prevent reversing directly
+      if(snake.length > 1 && nd.x === -dir.x && nd.y === -dir.y) return;
+      nextDir = nd;
+      e.preventDefault();
+    }
+  });
+
+  // Game loop tick
+  function tick(){
+    // apply nextDir if present
+    if(nextDir){ dir = nextDir; nextDir = null; }
+
+    const head = {x: snake[0].x + dir.x, y: snake[0].y + dir.y};
+
+    // wrap-around behavior
+    if(head.x < 0) head.x = cols - 1;
+    if(head.x >= cols) head.x = 0;
+    if(head.y < 0) head.y = rows - 1;
+    if(head.y >= rows) head.y = 0;
+
+    // check collision with itself
+    if(snake.some(s => s.x === head.x && s.y === head.y)){
+      // Game over
+      stopGame();
+      drawGame();
+      return;
+    }
+
+    // move snake
+    snake.unshift(head);
+
+    // check fruit
+    if(head.x === fruit.x && head.y === fruit.y){
+      score += 1;
+      // speed up slightly every 3 fruits, but cap
+      if(score % 3 === 0 && fps < 20){
+        fps += 1;
+        restartInterval();
+      }
+      placeFruit();
+      // reset the fruit timer since it was eaten
+      resetFruitTimer();
+      updateUI();
+    } else {
+      // remove tail
+      snake.pop();
+    }
+
+    drawGame();
+  }
+
+  function drawGame(){
+    // clear
+    ctx.clearRect(0,0,W,H);
+
+    // draw background subtle grid
+    ctx.fillStyle = colors.canvasBg;
+    ctx.fillRect(0,0,W,H);
+
+    // optional subtle grid lines
+    ctx.strokeStyle = "rgba(32,55,71,0.03)";
+    ctx.lineWidth = 1;
+    for(let c=0;c<=cols;c++){
+      ctx.beginPath();
+      ctx.moveTo(c*cellW,0);
+      ctx.lineTo(c*cellW,H);
+      ctx.stroke();
+    }
+    for(let r=0;r<=rows;r++){
+      ctx.beginPath();
+      ctx.moveTo(0,r*cellH);
+      ctx.lineTo(W,r*cellH);
+      ctx.stroke();
+    }
+
+    // draw fruit
+    const fx = fruit.x * cellW + cellW/2;
+    const fy = fruit.y * cellH + cellH/2;
+    const rad = Math.min(cellW,cellH)*0.36;
+    // fruit shadow
+    ctx.beginPath();
+    ctx.fillStyle = "rgba(0,0,0,0.08)";
+    ctx.ellipse(fx, fy + rad*0.2, rad*0.9, rad*0.5, 0, 0, Math.PI*2);
+    ctx.fill();
+    // fruit body
+    ctx.beginPath();
+    ctx.fillStyle = colors.fruit;
+    ctx.ellipse(fx, fy, rad, rad, 0, 0, Math.PI*2);
+    ctx.fill();
+    // tiny highlight
+    ctx.beginPath();
+    ctx.fillStyle = "rgba(255,255,255,0.45)";
+    ctx.ellipse(fx - rad*0.3, fy - rad*0.35, rad*0.25, rad*0.18, 0, 0, Math.PI*2);
+    ctx.fill();
+
+    // draw snake
+    for(let i=0;i<snake.length;i++){
+      const s = snake[i];
+      const x = s.x * cellW;
+      const y = s.y * cellH;
+      // head slightly brighter
+      ctx.fillStyle = (i===0) ? shadeColor(colors.snake, 10) : colors.snake;
+      roundRect(ctx, x+1, y+1, cellW-2, cellH-2, Math.min(cellW,cellH)*0.18, true, false);
+      // small inner shine
+      ctx.fillStyle = "rgba(255,255,255,0.04)";
+      roundRect(ctx, x+4, y+4, cellW-8, cellH-8, Math.min(cellW,cellH)*0.12, true, false);
+    }
+
+    // if not running show overlay
+    if(!running){
+      ctx.fillStyle = "rgba(255,255,255,0.8)";
+      ctx.fillRect(0,0,W,H);
+      ctx.fillStyle = colors.ink;
+      ctx.font = "600 28px 'Poppins', sans-serif";
+      ctx.textAlign = "center";
+      ctx.fillText("Press Start to Play", W/2, H/2 - 8);
+      ctx.font = "300 14px 'Poppins', sans-serif";
+      ctx.fillText("Arrows / WASD to move — Space to pause", W/2, H/2 + 18);
+    }
+  }
+
+  // start / stop
+  function start(){
+    if(running) return;
+    resetGame();
+    running = true;
+    restartInterval();
+    drawGame();
+  }
+
+  function stopGame(){
+    running = false;
+    if(gameInterval) clearInterval(gameInterval);
+    if(fruitTimer) { clearInterval(fruitTimer); fruitTimer = null; }
+    updateUI();
+  }
+
+  function restartInterval(){
+    if(gameInterval) clearInterval(gameInterval);
+    const ms = Math.max(40, Math.floor(1000 / fps));
+    gameInterval = setInterval(tick, ms);
+    speedDisplay.textContent = fps;
+  }
+
+  function togglePause(){
+    if(!running) return;
+    if(gameInterval){
+      // pause
+      clearInterval(gameInterval);
+      gameInterval = null;
+      if(fruitTimer) clearInterval(fruitTimer);
+      fruitTimer = null;
+    } else {
+      restartInterval();
+      resetFruitTimer();
+    }
+  }
+
+  // small helper to draw rounded rect
+  function roundRect(ctx, x, y, w, h, r, fill, stroke){
+    if(typeof r === 'undefined') r = 5;
+    if(typeof r === 'number'){ r = {tl:r,tr:r,br:r,bl:r}; }
+    ctx.beginPath();
+    ctx.moveTo(x + r.tl, y);
+    ctx.lineTo(x + w - r.tr, y);
+    ctx.quadraticCurveTo(x + w, y, x + w, y + r.tr);
+    ctx.lineTo(x + w, y + h - r.br);
+    ctx.quadraticCurveTo(x + w, y + h, x + w - r.br, y + h);
+    ctx.lineTo(x + r.bl, y + h);
+    ctx.quadraticCurveTo(x, y + h, x, y + h - r.bl);
+    ctx.lineTo(x, y + r.tl);
+    ctx.quadraticCurveTo(x, y, x + r.tl, y);
+    ctx.closePath();
+    if(fill) ctx.fill();
+    if(stroke) ctx.stroke();
+  }
+
+  // tiny color shade helper
+  function shadeColor(hex, percent) {
+    // hex to rgb
+    let c = hex.replace('#','');
+    if(c.length===3) c = c.split('').map(ch=>ch+ch).join('');
+    const num = parseInt(c,16);
+    let r = (num>>16) + Math.round(255 * (percent/100));
+    let g = ((num>>8)&0x00FF) + Math.round(255 * (percent/100));
+    let b = (num & 0x0000FF) + Math.round(255 * (percent/100));
+    r = Math.min(255, Math.max(0, r));
+    g = Math.min(255, Math.max(0, g));
+    b = Math.min(255, Math.max(0, b));
+    return '#' + ( (1<<24) + (r<<16) + (g<<8) + b ).toString(16).slice(1);
+  }
+
+  function updateUI(){
+    scoreEl.textContent = score;
+    speedDisplay.textContent = fps;
+    fruitTimerDisplay.textContent = fruitCountdown;
+  }
+
+  // start/restart button
+  startBtn.addEventListener('click', () => {
+    stopGame();
+    start();
+  });
+
+  // initialize small demo state and draw initial screen
+  resetGame();
+  drawGame();
+
+  // ensure canvas scales crisply on high-DPI displays (optional)
+  function fixHiDPICanvas(){
+    const dpr = window.devicePixelRatio || 1;
+    // only scale if device pixel ratio higher than 1
+    if(dpr === 1) return;
+    const cssW = canvas.clientWidth || canvas.width;
+    const cssH = canvas.clientHeight || canvas.height;
+    canvas.width = cssW * dpr;
+    canvas.height = cssH * dpr;
+    ctx.scale(dpr, dpr);
+  }
+
+  // Keep canvas crisp on resize
+  window.addEventListener('resize', () => {
+    // we keep fixed canvas pixel size for consistent gameplay, nothing to do here
+  });
+
+})();
+</script>
+</body>
+</html>

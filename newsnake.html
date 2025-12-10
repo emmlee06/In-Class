@@ -1,0 +1,467 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Heatless Snake — Cream & Light Blue</title>
+
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;500;700&display=swap" rel="stylesheet">
+
+<style>
+  :root{
+    --cream: #f7f3ea;
+    --light-blue: #d9e7f6;
+    --ink: #203747;
+    --snake: #1f5672;
+    --fruit: #ff6b6b;
+    --muted: #5b6b74;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%;margin:0;background:var(--cream);font-family:"Poppins",system-ui,-apple-system,"Segoe UI",Roboto,Arial; color:var(--ink);-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}
+  .wrap{min-height:100%;display:flex;align-items:center;justify-content:center;padding:36px}
+  .card{width:100%;max-width:960px;background:linear-gradient(180deg, rgba(217,231,246,0.95), rgba(255,255,255,0.96));border-radius:14px;box-shadow:0 10px 30px rgba(20,30,40,0.06);padding:22px;border:1px solid rgba(32,55,71,0.04)}
+  h1{margin:0;font-weight:500;font-size:1.5rem;color:var(--ink)}
+  .lead{margin:6px 0 14px 0;color:var(--muted);font-weight:300}
+  .topbar{display:flex;gap:12px;align-items:center;justify-content:center;margin-bottom:12px;flex-wrap:wrap}
+  .stat{background:rgba(255,255,255,0.7);padding:8px 12px;border-radius:999px;border:1px solid rgba(32,55,71,0.03);font-weight:600;color:var(--ink);min-width:84px;text-align:center}
+  .game-wrap{display:flex;gap:20px;align-items:flex-start;justify-content:center;flex-wrap:wrap}
+  canvas{background:transparent;border-radius:10px;border:1px solid rgba(32,55,71,0.05);box-shadow:inset 0 2px 8px rgba(0,0,0,0.03);display:block}
+  .sidebar{width:240px;min-width:220px;text-align:left;color:var(--muted);font-weight:300}
+  .sidebar h3{margin:0 0 8px 0;font-weight:500;color:var(--ink);font-size:1rem}
+  .muted-block{background:rgba(255,255,255,0.86);padding:12px;border-radius:10px;border:1px solid rgba(32,55,71,0.04)}
+  .btn{display:inline-block;padding:10px 14px;border-radius:10px;background:var(--ink);color:white;text-decoration:none;border:0;cursor:pointer;font-weight:600;margin-top:10px}
+  footer{margin-top:14px;color:var(--muted);font-size:0.85rem;font-weight:300;text-align:center}
+  @media (max-width:780px){ .game-wrap{flex-direction:column;align-items:center} .sidebar{width:100%;min-width:unset} }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="card" role="main">
+    <h1>Heatless Snake</h1>
+    <p class="lead">Classic snake in a calm cream & light-blue style. Fruit teleports every 5 seconds if you don't eat it.</p>
+
+    <div class="topbar" aria-hidden="true">
+      <div class="stat">Score: <span id="score">0</span></div>
+      <div class="stat">Speed: <span id="speedDisplay">8</span> fps</div>
+      <div class="stat">Fruit in: <span id="fruitTimer">5</span>s</div>
+    </div>
+
+    <div class="game-wrap">
+      <canvas id="game" width="520" height="520" aria-label="Snake game"></canvas>
+
+      <div class="sidebar" aria-hidden="false">
+        <h3>How to play</h3>
+        <div class="muted-block">
+          <p style="margin:0 0 8px 0">Arrow keys or W/A/S/D to move. Eat the red fruit to grow. If you don't reach the fruit within 5 seconds, it will teleport to a new random spot.</p>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">
+            <button class="btn" id="startBtn">Start</button>
+            <button class="btn" id="pauseBtn" style="background:var(--muted);">Pause</button>
+            <button class="btn" id="restartBtn" style="background:transparent;color:var(--ink);border:1px solid rgba(32,55,71,0.06)">Restart</button>
+          </div>
+        </div>
+
+        <h3 style="margin-top:14px">Theme</h3>
+        <div class="muted-block">
+          <p style="margin:0">Cream & light blue palette, thin rounded font for a modern calm look.</p>
+        </div>
+
+        <h3 style="margin-top:12px">Controls</h3>
+        <div class="muted-block">
+          <p style="margin:0">Arrows / W A S D — Space toggles pause. On mobile, tap Start then use swipe gestures.</p>
+        </div>
+      </div>
+    </div>
+
+    <footer>Fruit moves every 5 seconds if uneaten. Enjoy!</footer>
+  </div>
+</div>
+
+<script>
+(function(){
+  // Canvas & grid
+  const canvas = document.getElementById('game');
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width;
+  const H = canvas.height;
+  const COLS = 26, ROWS = 26;
+  const cellW = Math.floor(W / COLS);
+  const cellH = Math.floor(H / ROWS);
+
+  // UI elements
+  const scoreEl = document.getElementById('score');
+  const speedEl = document.getElementById('speedDisplay');
+  const fruitTimerEl = document.getElementById('fruitTimer');
+  const startBtn = document.getElementById('startBtn');
+  const pauseBtn = document.getElementById('pauseBtn');
+  const restartBtn = document.getElementById('restartBtn');
+
+  // Colors (matches CSS)
+  const COLORS = {
+    bg: getComputedStyle(document.documentElement).getPropertyValue('--light-blue').trim() || '#d9e7f6',
+    cream: getComputedStyle(document.documentElement).getPropertyValue('--cream').trim() || '#f7f3ea',
+    snake: getComputedStyle(document.documentElement).getPropertyValue('--snake').trim() || '#1f5672',
+    fruit: getComputedStyle(document.documentElement).getPropertyValue('--fruit').trim() || '#ff6b6b',
+    ink: getComputedStyle(document.documentElement).getPropertyValue('--ink').trim() || '#203747'
+  };
+
+  // Game state
+  let snake = [];
+  let dir = {x:1,y:0}; // start moving right
+  let nextDir = null;
+  let fruit = {x:0,y:0};
+  let score = 0;
+  let fps = 8;
+  let running = false;
+  let lastUpdate = 0;
+  let tickInterval = 1000 / fps;
+  let fruitIntervalMs = 5000; // 5 seconds
+  let fruitCountdown = Math.floor(fruitIntervalMs/1000);
+  let fruitIntervalHandle = null;
+  let animationHandle = null;
+
+  // Helpers
+  function randCell(){
+    return { x: Math.floor(Math.random()*COLS), y: Math.floor(Math.random()*ROWS) };
+  }
+
+  function placeFruit(){
+    let tries = 0;
+    while(true){
+      const p = randCell();
+      if(!snake.some(s => s.x === p.x && s.y === p.y)){
+        fruit = p;
+        break;
+      }
+      if(++tries > 500) { fruit = p; break; }
+    }
+  }
+
+  function resetFruitTimer(){
+    fruitCountdown = Math.floor(fruitIntervalMs / 1000);
+    fruitTimerEl.textContent = fruitCountdown;
+    if(fruitIntervalHandle) clearInterval(fruitIntervalHandle);
+    fruitIntervalHandle = setInterval(() => {
+      fruitCountdown--;
+      if(fruitCountdown <= 0){
+        placeFruit();
+        fruitCountdown = Math.floor(fruitIntervalMs / 1000);
+      }
+      fruitTimerEl.textContent = fruitCountdown;
+    }, 1000);
+  }
+
+  function resetGameState(){
+    snake = [{x: Math.floor(COLS/2), y: Math.floor(ROWS/2)}];
+    dir = {x:1,y:0};
+    nextDir = null;
+    score = 0;
+    fps = 8;
+    tickInterval = 1000 / fps;
+    scoreEl.textContent = score;
+    speedEl.textContent = fps;
+    placeFruit();
+    resetFruitTimer();
+  }
+
+  // Drawing
+  function clear(){
+    ctx.fillStyle = COLORS.cream;
+    ctx.fillRect(0,0,W,H);
+  }
+
+  function drawGrid(){
+    // subtle background gradient
+    const g = ctx.createLinearGradient(0,0,0,H);
+    g.addColorStop(0, 'rgba(255,255,255,0.03)');
+    g.addColorStop(1, 'rgba(0,0,0,0.01)');
+    ctx.fillStyle = g;
+    ctx.fillRect(0,0,W,H);
+
+    // optional faint grid
+    ctx.strokeStyle = "rgba(32,55,71,0.03)";
+    ctx.lineWidth = 1;
+    for(let c=0;c<=COLS;c++){
+      ctx.beginPath();
+      ctx.moveTo(c*cellW,0);
+      ctx.lineTo(c*cellW,H);
+      ctx.stroke();
+    }
+    for(let r=0;r<=ROWS;r++){
+      ctx.beginPath();
+      ctx.moveTo(0,r*cellH);
+      ctx.lineTo(W,r*cellH);
+      ctx.stroke();
+    }
+  }
+
+  function drawFruit(){
+    const cx = fruit.x * cellW + cellW/2;
+    const cy = fruit.y * cellH + cellH/2;
+    const r = Math.min(cellW,cellH) * 0.36;
+    // shadow
+    ctx.beginPath();
+    ctx.fillStyle = "rgba(0,0,0,0.08)";
+    ctx.ellipse(cx, cy + r*0.2, r*0.9, r*0.45, 0, 0, Math.PI*2);
+    ctx.fill();
+    // body
+    ctx.beginPath();
+    ctx.fillStyle = COLORS.fruit;
+    ctx.ellipse(cx, cy, r, r, 0, 0, Math.PI*2);
+    ctx.fill();
+    // highlight
+    ctx.beginPath();
+    ctx.fillStyle = "rgba(255,255,255,0.45)";
+    ctx.ellipse(cx - r*0.3, cy - r*0.37, r*0.24, r*0.16, 0, 0, Math.PI*2);
+    ctx.fill();
+  }
+
+  function roundRect(ctx,x,y,w,h,r,fill){
+    if(typeof r === 'number') r = {tl:r,tr:r,br:r,bl:r};
+    ctx.beginPath();
+    ctx.moveTo(x + r.tl, y);
+    ctx.lineTo(x + w - r.tr, y);
+    ctx.quadraticCurveTo(x + w, y, x + w, y + r.tr);
+    ctx.lineTo(x + w, y + h - r.br);
+    ctx.quadraticCurveTo(x + w, y + h, x + w - r.br, y + h);
+    ctx.lineTo(x + r.bl, y + h);
+    ctx.quadraticCurveTo(x, y + h, x, y + h - r.bl);
+    ctx.lineTo(x, y + r.tl);
+    ctx.quadraticCurveTo(x, y, x + r.tl, y);
+    ctx.closePath();
+    if(fill) ctx.fill();
+  }
+
+  function drawSnake(){
+    for(let i=0;i<snake.length;i++){
+      const s = snake[i];
+      const x = s.x * cellW;
+      const y = s.y * cellH;
+      ctx.fillStyle = (i === 0) ? shade(COLORS.snake, 12) : COLORS.snake;
+      roundRect(ctx, x+1, y+1, cellW-2, cellH-2, Math.min(cellW,cellH)*0.16, true);
+      ctx.fillStyle = "rgba(255,255,255,0.04)";
+      roundRect(ctx, x+4, y+4, cellW-8, cellH-8, Math.min(cellW,cellH)*0.12, true);
+    }
+  }
+
+  function render(){
+    clear();
+    drawGrid();
+    drawFruit();
+    drawSnake();
+    if(!running){
+      // overlay
+      ctx.fillStyle = "rgba(255,255,255,0.85)";
+      ctx.fillRect(0,0,W,H);
+      ctx.fillStyle = COLORS.ink;
+      ctx.font = "600 20px 'Poppins', sans-serif";
+      ctx.textAlign = "center";
+      ctx.fillText("Press Start to Play", W/2, H/2 - 6);
+      ctx.font = "300 12px 'Poppins', sans-serif";
+      ctx.fillText("Arrows / WASD to move — Space to pause", W/2, H/2 + 14);
+    }
+  }
+
+  // Game logic tick (movement)
+  function gameTick(){
+    // apply queued direction
+    if(nextDir){
+      // prevent 180 turn
+      if(!(snake.length > 1 && nextDir.x === -dir.x && nextDir.y === -dir.y)){
+        dir = nextDir;
+      }
+      nextDir = null;
+    }
+
+    const head = { x: snake[0].x + dir.x, y: snake[0].y + dir.y };
+
+    // wrap-around
+    if(head.x < 0) head.x = COLS - 1;
+    if(head.x >= COLS) head.x = 0;
+    if(head.y < 0) head.y = ROWS - 1;
+    if(head.y >= ROWS) head.y = 0;
+
+    // collision with self
+    if(snake.some(s => s.x === head.x && s.y === head.y)){
+      running = false;
+      stopFruitTimer();
+      return;
+    }
+
+    snake.unshift(head);
+
+    // eat fruit
+    if(head.x === fruit.x && head.y === fruit.y){
+      score++;
+      scoreEl.textContent = score;
+      // speed up slightly every 3 points
+      if(score % 3 === 0 && fps < 22){
+        fps++;
+        tickInterval = 1000 / fps;
+        speedEl.textContent = fps;
+      }
+      placeFruit();
+      resetFruitTimer();
+    } else {
+      snake.pop();
+    }
+  }
+
+  // Main loop using requestAnimationFrame with accumulator
+  function loop(timestamp){
+    if(!lastUpdate) lastUpdate = timestamp;
+    const elapsed = timestamp - lastUpdate;
+    if(running){
+      if(elapsed >= tickInterval){
+        // may need to tick multiple times if lagged
+        const ticks = Math.floor(elapsed / tickInterval);
+        for(let i=0;i<ticks;i++){
+          if(!running) break;
+          gameTick();
+        }
+        lastUpdate = timestamp;
+      }
+    } else {
+      lastUpdate = timestamp;
+    }
+    render();
+    animationHandle = requestAnimationFrame(loop);
+  }
+
+  // Controls
+  const keyMap = {
+    ArrowLeft: {x:-1,y:0}, ArrowRight:{x:1,y:0}, ArrowUp:{x:0,y:-1}, ArrowDown:{x:0,y:1},
+    a:{x:-1,y:0}, d:{x:1,y:0}, w:{x:0,y:-1}, s:{x:0,y:1}
+  };
+
+  window.addEventListener('keydown', (e)=>{
+    if(e.key === ' '){
+      if(running) pauseGame();
+      else resumeOrStart();
+      e.preventDefault();
+      return;
+    }
+    const km = keyMap[e.key];
+    if(km){
+      nextDir = km;
+      e.preventDefault();
+    }
+  });
+
+  // Basic swipe support for mobile
+  (function addTouchControls(){
+    let touchStart = null;
+    canvas.addEventListener('touchstart', e => {
+      const t = e.touches[0];
+      touchStart = {x: t.clientX, y: t.clientY};
+    }, {passive:true});
+    canvas.addEventListener('touchend', e => {
+      if(!touchStart) return;
+      const t = (e.changedTouches && e.changedTouches[0]) || touchStart;
+      const dx = t.clientX - touchStart.x;
+      const dy = t.clientY - touchStart.y;
+      if(Math.hypot(dx,dy) < 20) return;
+      if(Math.abs(dx) > Math.abs(dy)){
+        nextDir = dx > 0 ? {x:1,y:0} : {x:-1,y:0};
+      } else {
+        nextDir = dy > 0 ? {x:0,y:1} : {x:0,y:-1};
+      }
+      touchStart = null;
+    }, {passive:true});
+  })();
+
+  // Buttons
+  startBtn.addEventListener('click', () => {
+    if(!running){
+      startGame();
+      startBtn.textContent = 'Playing';
+      startBtn.disabled = true;
+    }
+  });
+
+  pauseBtn.addEventListener('click', () => {
+    if(running) pauseGame();
+    else resumeOrStart();
+  });
+
+  restartBtn.addEventListener('click', () => {
+    stopAll();
+    resetGameState();
+    render();
+    startBtn.disabled = false;
+    startBtn.textContent = 'Start';
+  });
+
+  // Start / Pause / Resume helpers
+  function startGame(){
+    resetGameState();
+    running = true;
+    lastUpdate = 0;
+    if(!animationHandle) animationHandle = requestAnimationFrame(loop);
+    resetFruitTimer();
+    startBtn.disabled = true;
+    pauseBtn.textContent = 'Pause';
+  }
+
+  function pauseGame(){
+    running = false;
+    stopFruitTimer();
+    pauseBtn.textContent = 'Resume';
+  }
+
+  function resumeOrStart(){
+    if(!animationHandle) animationHandle = requestAnimationFrame(loop);
+    if(!running){
+      running = true;
+      lastUpdate = 0;
+      resetFruitTimer();
+      pauseBtn.textContent = 'Pause';
+      startBtn.disabled = true;
+    }
+  }
+
+  function stopAll(){
+    running = false;
+    if(animationHandle) { cancelAnimationFrame(animationHandle); animationHandle = null; }
+    stopFruitTimer();
+  }
+
+  function stopFruitTimer(){
+    if(fruitIntervalHandle) { clearInterval(fruitIntervalHandle); fruitIntervalHandle = null; }
+  }
+
+  // Utility: lighten color by percent
+  function shade(hex, percent){
+    let c = hex.replace('#','');
+    if(c.length === 3) c = c.split('').map(ch=>ch+ch).join('');
+    const num = parseInt(c,16);
+    let r = (num >> 16) + Math.round(255 * (percent/100));
+    let g = ((num >> 8) & 0x00FF) + Math.round(255 * (percent/100));
+    let b = (num & 0x0000FF) + Math.round(255 * (percent/100));
+    r = Math.min(255, Math.max(0, r));
+    g = Math.min(255, Math.max(0, g));
+    b = Math.min(255, Math.max(0, b));
+    return '#' + ((1<<24) + (r<<16) + (g<<8) + b).toString(16).slice(1);
+  }
+
+  // Start animation frame (initial render)
+  resetGameState();
+  render();
+  animationHandle = requestAnimationFrame(loop);
+
+  // Make canvas crisp on HiDPI displays
+  (function fixHiDPI(){
+    const dpr = window.devicePixelRatio || 1;
+    if(dpr === 1) return;
+    const cssW = canvas.width;
+    const cssH = canvas.height;
+    canvas.width = cssW * dpr;
+    canvas.height = cssH * dpr;
+    canvas.style.width = cssW + 'px';
+    canvas.style.height = cssH + 'px';
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+  })();
+
+})();
+</script>
+</body>
+</html>

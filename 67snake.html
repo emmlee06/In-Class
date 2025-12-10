@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Snake 6/7 Edition</title>
+<style>
+    body {
+        background: #0b1a33;
+        color: #fff;
+        font-family: "Inter", sans-serif;
+        display: flex;
+        justify-content: center;
+        padding-top: 30px;
+    }
+
+    canvas {
+        background: #13294b;
+        border: 4px solid white;
+    }
+
+    h1 {
+        font-weight: 700;
+        margin-bottom: 20px;
+        text-align: center;
+    }
+</style>
+</head>
+<body>
+
+<div>
+    <h1>Snake – 6/7 Edition</h1>
+    <canvas id="game" width="400" height="400"></canvas>
+</div>
+
+<script>
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
+
+const grid = 20;
+let snake = [{ x: 200, y: 200 }];
+let dx = grid;
+let dy = 0;
+
+let fruit = randomFruit();
+let score = 0;
+
+let lastFruitMove = Date.now();
+
+// Move fruit every 5 seconds
+function maybeMoveFruit() {
+    if (Date.now() - lastFruitMove > 5000) {
+        fruit = randomFruit();
+        lastFruitMove = Date.now();
+    }
+}
+
+function randomFruit() {
+    return {
+        x: Math.floor(Math.random() * 20) * grid,
+        y: Math.floor(Math.random() * 20) * grid
+    };
+}
+
+document.addEventListener("keydown", e => {
+    if (e.key === "ArrowUp" && dy === 0) { dx = 0; dy = -grid; }
+    if (e.key === "ArrowDown" && dy === 0) { dx = 0; dy = grid; }
+    if (e.key === "ArrowLeft" && dx === 0) { dx = -grid; dy = 0; }
+    if (e.key === "ArrowRight" && dx === 0) { dx = grid; dy = 0; }
+});
+
+// Draw snake segment with alternating 6/7
+function drawSnakeSegment(x, y, index) {
+    ctx.fillStyle = "white";
+    ctx.font = "16px Inter";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+
+    const value = index % 2 === 0 ? "6" : "7";
+
+    // Soft dark square background
+    ctx.fillStyle = "#1d3b6e";
+    ctx.fillRect(x, y, grid, grid);
+
+    ctx.fillStyle = "white";
+    ctx.fillText(value, x + grid/2, y + grid/2);
+}
+
+function gameLoop() {
+    requestAnimationFrame(gameLoop);
+
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    maybeMoveFruit();
+
+    // Move snake
+    const head = { x: snake[0].x + dx, y: snake[0].y + dy };
+
+    // Wrap around
+    if (head.x < 0) head.x = canvas.width - grid;
+    if (head.x >= canvas.width) head.x = 0;
+    if (head.y < 0) head.y = canvas.height - grid;
+    if (head.y >= canvas.height) head.y = 0;
+
+    snake.unshift(head);
+
+    // Eat fruit
+    if (head.x === fruit.x && head.y === fruit.y) {
+        fruit = randomFruit();
+        lastFruitMove = Date.now();
+        score++;
+    } else {
+        snake.pop();
+    }
+
+    // Self collision → reset
+    for (let i = 1; i < snake.length; i++) {
+        if (snake[i].x === head.x && snake[i].y === head.y) {
+            snake = [{ x: 200, y: 200 }];
+            dx = grid;
+            dy = 0;
+            score = 0;
+        }
+    }
+
+    // Draw fruit
+    ctx.fillStyle = "#e74c3c";
+    ctx.beginPath();
+    ctx.arc(fruit.x + grid/2, fruit.y + grid/2, grid/2.2, 0, Math.PI*2);
+    ctx.fill();
+
+    // Draw snake with alternating 6/7
+    snake.forEach((segment, index) => {
+        drawSnakeSegment(segment.x, segment.y, index);
+    });
+}
+
+gameLoop();
+</script>
+
+</body>
+</html>
